@@ -1,32 +1,31 @@
-import React, { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import "./index.css";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ScatterChart,
-  Scatter,
-  ZAxis,
-  Legend,
-  ReferenceDot,
-  LabelList,
-} from "recharts";
 import { motion } from "framer-motion";
+  import { StrictMode, useMemo, useState } from "react";
+  import { createRoot } from "react-dom/client";
+import {
+    CartesianGrid,
+    Legend,
+    Line,
+    LineChart,
+    ReferenceDot,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
+} from "recharts";
 
 /**
  * Free-return trajectory browser app
@@ -112,8 +111,6 @@ const R_EARTH = 6378.1363;
 const R_MOON = 1737.4;
 const OMEGA_EARTH = 7.292115e-5; // rad/s
 const DEG2RAD = Math.PI / 180;
-const RAD2DEG = 180 / Math.PI;
-const AU_KM = 149597870.7;
 
 function v3(x = 0, y = 0, z = 0): Vec3 {
   return { x, y, z };
@@ -174,11 +171,6 @@ function gmstRad(date: Date): number {
   gmstDeg = ((gmstDeg % 360) + 360) % 360;
   return gmstDeg * DEG2RAD;
 }
-function rotateZ(v: Vec3, a: number): Vec3 {
-  const c = Math.cos(a);
-  const s = Math.sin(a);
-  return { x: c * v.x - s * v.y, y: s * v.x + c * v.y, z: v.z };
-}
 function rotateX(v: Vec3, a: number): Vec3 {
   const c = Math.cos(a);
   const s = Math.sin(a);
@@ -227,13 +219,6 @@ function moonPositionECI(date: Date): Vec3 {
   // Convert from mean ecliptic-ish frame to equatorial using obliquity.
   const eps = (23.4393 - 3.563e-7 * d) * DEG2RAD;
   return rotateX(v3(xh, yh, zh), -eps);
-}
-
-function moonVelocityECI(date: Date): Vec3 {
-  const dt = 60.0;
-  const p1 = moonPositionECI(new Date(date.getTime() - dt * 1000));
-  const p2 = moonPositionECI(new Date(date.getTime() + dt * 1000));
-  return scale(sub(p2, p1), 1 / (2 * dt));
 }
 
 function buildLaunchBasis(date: Date, latDeg: number, lonDeg: number) {
@@ -345,9 +330,9 @@ function propagate(inputs: Inputs, dvKmS: number) {
   const samples: Sample[] = [];
   const radiusPlot: { hours: number; rEarth: number; rMoon: number }[] = [];
 
-  let minMoonDistance = Infinity;
+  let minMoonDistance = Number.POSITIVE_INFINITY;
   let minMoonTime = 0;
-  let minEarthAfterMoon = Infinity;
+  let minEarthAfterMoon = Number.POSITIVE_INFINITY;
   let minEarthAfterMoonTime = 0;
   let seenMoonEncounter = false;
 
@@ -423,7 +408,7 @@ function shootForPerilune(inputs: Inputs): SolveResult {
   let f1 = propagate(inputs, dv1).moonAlt - inputs.targetMoonAltKm;
 
   let bestDv = inputs.initialDvGuessKmS;
-  let bestErr = Infinity;
+  let bestErr = Number.POSITIVE_INFINITY;
   let bestRun = propagate(inputs, bestDv);
 
   for (const trial of [dv0, dv1, bestDv]) {
@@ -980,7 +965,7 @@ export default function FreeReturnTrajectoryWebapp() {
                 <CardTitle>Trajectory samples</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="max-h-[420px] overflow-auto rounded-2xl border">
+                <div className="max-h-105 overflow-auto rounded-2xl border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -998,8 +983,8 @@ export default function FreeReturnTrajectoryWebapp() {
                     <TableBody>
                       {(result?.trajectory ?? [])
                         .slice(0, 200)
-                        .map((row, idx) => (
-                          <TableRow key={`${row.utc}-${idx}`}>
+                        .map((row) => (
+                          <TableRow key={row.tSec}>
                             <TableCell className="font-mono text-xs">
                               {row.utc}
                             </TableCell>
@@ -1029,3 +1014,15 @@ export default function FreeReturnTrajectoryWebapp() {
     </div>
   );
 }
+
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+  throw new Error("Root element #root was not found.");
+}
+
+createRoot(rootElement).render(
+  <StrictMode>
+    <FreeReturnTrajectoryWebapp />
+  </StrictMode>,
+);
